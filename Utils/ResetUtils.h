@@ -32,6 +32,8 @@ class ResetUtils{
     ts->tmpCpu         = 0;  
     ts->sen            = 0;     
     ts->cos            = 0;
+    // bmeOk, as7331Ok, vemlOk, as3935Ok e scdOk   
+    // são alterados no reset dos sensores
 
   }
 
@@ -69,7 +71,7 @@ class ResetUtils{
     tempos->cicloInicio    = getMillis();
     tempos->tempoDormido   = 0;
     _varMantidas           = false;
-    strcpy(_descricaoResetSoftware, "");
+    // strcpy(_descricaoResetSoftware, "");
 
   }
 
@@ -81,10 +83,10 @@ class ResetUtils{
 
     Serial.println(mensagem);
 
-    strncpy(_descricaoResetSoftware, mensagem.c_str(), sizeof(_descricaoResetSoftware)-1);
-    _descricaoResetSoftware[sizeof(_descricaoResetSoftware) - 1] = '\0';
+    // strncpy(_descricaoResetSoftware, mensagem.c_str(), sizeof(_descricaoResetSoftware)-1);
+    // _descricaoResetSoftware[sizeof(_descricaoResetSoftware) - 1] = '\0';
     
-    Serial.println(_descricaoResetSoftware);
+    // Serial.println(_descricaoResetSoftware);
 
     if(!mantemVariaveis)
       resetaVariaveis(ts, tempos);
@@ -100,11 +102,11 @@ class ResetUtils{
   //==================================================================================
   public: static void deep_sleep(long tempo, String mensagem=""){
 
-    if(!isNotNullOrEmptyStr(mensagem)){
-      Serial.println(STR_DEBUG_RESET_MSG);
-      strncpy(_descricaoResetSoftware, mensagem.c_str(), sizeof(_descricaoResetSoftware)-1);
-      _descricaoResetSoftware[sizeof(_descricaoResetSoftware) - 1] = '\0';
-    }
+    // if(!isNotNullOrEmptyStr(mensagem)){
+    //   Serial.println(STR_DEBUG_RESET_MSG);
+    //   strncpy(_descricaoResetSoftware, mensagem.c_str(), sizeof(_descricaoResetSoftware)-1);
+    //   _descricaoResetSoftware[sizeof(_descricaoResetSoftware) - 1] = '\0';
+    // }
     esp_sleep_enable_timer_wakeup(tempo * NANO_FACTOR);
     Serial.flush();
     esp_deep_sleep_start();

@@ -53,6 +53,6 @@
 #define DIR_ADC_MIN             0
 #define DIR_ADC_MAX             (ADC_MAX * 1.75f / _3V3)     // Limite teórico de 1.59, +0.15 de garantia. https://www.usinainfo.com.br/blog/indicador-de-direcao-do-vento-com-arduino-melhorando-sua-estacao-meteorologica/
 
-#define BAT_ADC_MIN             (ADC_MAX * 2.70f / _3V3 )/2  // 2.7volts -> "A/2" por conta do resistor
-#define BAT_ADC_MAX             (ADC_MAX * 4.50f / _3V3 )/2  // 4.5volts -> "A/2" por conta do resistor
+#define BAT_ADC_MIN             (ADC_MAX * 3.00f / _3V3 )/2  // 3.0volts -> "A/2" por conta do resistor
+#define BAT_ADC_MAX             (ADC_MAX * 4.30f / _3V3 )/2  // 4.3volts -> "A/2" por conta do resistor
 #define AS3935_ADDR             0x03

@@ -173,3 +173,14 @@ bool noIntervalo(float valor, float valorMinimo, float valorMaximo){
     return valor >= valorMinimo && valor <= valorMaximo;
 
 }
+
+
+String arrayToString(String array[], int arraySize) {
+  if (!array || arraySize <= 0) return "";
+  String result;
+  for (int i = 0; i < arraySize; i++) {
+    result += array[i];
+    if (i < arraySize - 1) result += ", ";
+  }
+  return result;
+}

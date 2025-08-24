@@ -49,7 +49,7 @@ class WiFiUtils{
     }
 
     Serial.println(String(STR_INFO_CONFIG));
-    Serial.println(String(STR_INFO_SSID  ) + String(config->ssid ));
+    Serial.println(String(STR_INFO_SSID  ) + arrayToString(config->ssid,  config->qtdRedes));
     Serial.println(String(STR_INFO_TOKEN ) + String(config->token));
     Serial.println(String(STR_INFO_BIRUTA) + String(config->modeloBiruta));
                 
@@ -78,71 +78,139 @@ class WiFiUtils{
   //==================================================================================
   //============================= INTERNO: Conexão WiFi ==============================
   //==================================================================================
-  private: static bool _conectaWiFiMelhorRssi(ConfigEstacao *config, bool contingencia=false) {
-
-    //------------------------ Prepara conexão
+  private: static bool _conectaWiFiMelhorRssi(ConfigEstacao *config, bool contingencia = false) {
+    
+    if(!WiFi.enableSTA(true)) {
+        Serial.println("[ERRO] Falha ao ativar modo STA");
+        return false;
+    }
+    
     WiFi.mode(WIFI_STA);
     WiFi.setSleep(false);
-    WiFi.enableSTA(true);
     WiFi.disconnect(true);
-    delay(1000); 
+    delay(1000);
 
-    // Encontra o BSSID com melhor sinal para o dado for the given SSID
-    String melhorBSSID = "";
-    int melhorIndiceBSSID = 0;
-    int melhorRSSI = -100;   // Inicia em um valor muito baixo (inconectável)
-    delay(100);
+    struct BSSIDInfo {
+        String bssid;
+        String ssid;
+        String user;
+        String senha;
+        int rssi;
+    };
+
+    const int MAX_BSSIDS = 20;  
+    BSSIDInfo bssids[MAX_BSSIDS];
+    int bssidCount = 0;
 
     Serial.println("Buscando redes WiFi compatíveis...");
-    uint16_t n = WiFi.scanNetworks();
-    for (uint16_t i = 0; i < n; i++) {
-        if (WiFi.SSID(i) == config->ssid) {
-            Serial.printf("Encontrado SSID: %s, com BSSID: %s e RSSI: %d\n", WiFi.SSID(i).c_str(), WiFi.BSSIDstr(i).c_str(), WiFi.RSSI(i));
-            if (WiFi.RSSI(i) > melhorRSSI) {
-                melhorRSSI  = WiFi.RSSI(i);
-                melhorBSSID = WiFi.BSSIDstr(i);
-                melhorIndiceBSSID = i;
+    int16_t n = WiFi.scanNetworks();
+    if (n == WIFI_SCAN_FAILED) {
+        Serial.println("[ERRO] Falha no scan de redes");
+        return false;
+    }
+
+    for (int i = 0; i < n && bssidCount < MAX_BSSIDS; i++) {
+        String scannedSSID = WiFi.SSID(i);
+        if (scannedSSID.isEmpty()) continue;
+
+        for (int j = 0; j < config->qtdRedes && bssidCount < MAX_BSSIDS; j++) {
+            if (scannedSSID == config->ssid[j]) {
+                String bssidStr = WiFi.BSSIDstr(i);
+                if (bssidStr.isEmpty() || bssidStr == "00:00:00:00:00:00") {
+                    Serial.println("[AVISO] BSSID inválido encontrado, ignorando...");
+                    continue;
+                }
+
+                Serial.printf("Encontrado SSID: %s, com BSSID: %s e RSSI: %d\n", 
+                    scannedSSID.c_str(), bssidStr.c_str(), WiFi.RSSI(i));
+
+                bssids[bssidCount].bssid = bssidStr;
+                bssids[bssidCount].ssid  = scannedSSID;
+                bssids[bssidCount].rssi  = WiFi.RSSI(i);
+                bssids[bssidCount].user  = config->user[j];
+                bssids[bssidCount].senha = config->senha[j];
+                bssidCount++;
             }
         }
     }
 
-    if (melhorBSSID == "") {
-        Serial.println("[ERRO]: Nenhum access point encontrado para o dado SSID!");
+    if (bssidCount == 0) {
+        Serial.println("[ERRO]: Nenhum access point compatível encontrado.");
         return false;
     }
 
-    Serial.printf("Conectando ao BSSID %s (RSSI: %d, indice: %d)\n", melhorBSSID.c_str(), melhorRSSI, melhorIndiceBSSID);
-
-    uint8_t* bssid = WiFiUtils::convertBSSIDToArray(melhorBSSID);
-    if (bssid == nullptr) {
-        Serial.println("[ERRO]: Falha ao converter BSSID!");
-        return false;
-    }
-    
-    // Print the BSSID for debugging
-    Serial.printf("BSSID to connect: %02X:%02X:%02X:%02X:%02X:%02X\n", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
-
-
-    //------------------------ Attempt connection
-    if (ValidateUtils::possuiUser(config)) {
-        // Conexão WPA2 (empresarial/campus) via PEAP
-        WiFi.begin(config->ssid.c_str(), WPA2_AUTH_PEAP, config->user.c_str(), config->user.c_str(), config->senha.c_str(), NULL, NULL, NULL, 0, WiFi.BSSID(melhorIndiceBSSID),true);
-        // WiFi.begin(config->ssid.c_str(), WPA2_AUTH_PEAP, config->user.c_str(), config->user.c_str(), config->senha.c_str(), bssid, true);
-    } else {
-        // Conexão WPA2 (pessoal)
-        WiFi.begin(config->ssid.c_str(), config->senha.c_str(), 0, bssid);
+    // Arranja pelo melhor sinal
+    for (int i = 0; i < bssidCount - 1; i++) {
+        for (int j = i + 1; j < bssidCount; j++) {
+            if (bssids[i].rssi < bssids[j].rssi) {
+                BSSIDInfo temp = bssids[i];
+                bssids[i] = bssids[j];
+                bssids[j] = temp;
+            }
+        }
     }
 
-    //------------------------ Espera pela conexão
-    uint16_t counterAux = 0;
-    do{
-        Serial.println(STR_INFO_ESPERANDO_WIFI + String(WiFi.RSSI()));  
-        delay(500);
-        counterAux++; 
-    }while(WiFi.status() != WL_CONNECTED && counterAux < ESPERA_CONEXAO);
+    // Tenta os N melhores
+    int tentativas = min(NUM_TENTATIVAS_CONEXAO, bssidCount);
+    for (int i = 0; i < tentativas; i++) {
+        Serial.printf("Tentando conectar ao BSSID %s (SSID: %s, RSSI: %d)\n", bssids[i].bssid.c_str(), bssids[i].ssid.c_str(), bssids[i].rssi);
 
-    return WiFi.status() == WL_CONNECTED;
-}
+        uint8_t* bssid = WiFiUtils::convertBSSIDToArray(bssids[i].bssid);
+        if (bssid == nullptr) {
+            Serial.println("[ERRO]: Falha ao converter BSSID.");
+            continue;
+        }
+
+        // [Added] Validate BSSID isn't all zeros
+        bool allZeros = true;
+        for (int k = 0; k < 6; k++) {
+            if (bssid[k] != 0x00) {
+                allZeros = false;
+                break;
+            }
+        }
+        if (allZeros) {
+            Serial.println("[ERRO] BSSID inválido (todos zeros)");
+            continue;
+        }
+
+        Serial.printf("BSSID to connect: %02X:%02X:%02X:%02X:%02X:%02X\n", 
+            bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+
+        // Se tiver user, loga com user, se não, loga normal
+        if (bssids[i].user.length() > 0) {
+            WiFi.begin(bssids[i].ssid.c_str(), WPA2_AUTH_PEAP, 
+                      bssids[i].user.c_str(), bssids[i].user.c_str(),
+                      bssids[i].senha.c_str(), NULL, NULL, NULL, 0, bssid, true);
+        } else {
+            WiFi.begin(bssids[i].ssid.c_str(), bssids[i].senha.c_str(), 0, bssid);
+        }
+
+        // Conecta
+        uint16_t counterAux = 0;
+        do {
+            Serial.println(STR_INFO_ESPERANDO_WIFI + String(WiFi.RSSI()));
+            delay(500);
+            esp_task_wdt_reset();
+            counterAux++;
+        } while (WiFi.status() != WL_CONNECTED && counterAux < ESPERA_CONEXAO);
+
+        if (WiFi.status() == WL_CONNECTED) {
+            uint8_t* connBSSID = WiFi.BSSID();
+            Serial.printf("Conectado ao BSSID: %02X:%02X:%02X:%02X:%02X:%02X\n",
+                          connBSSID[0], connBSSID[1], connBSSID[2],
+                          connBSSID[3], connBSSID[4], connBSSID[5]);
+            return true;
+        } else {
+            Serial.println("[ERRO]: Falha ao conectar. Tentando próximo...");
+            WiFi.disconnect(true);
+            delay(1000);
+        }
+    }
+
+    Serial.println("[ERRO]: Nenhum BSSID pôde ser conectado.");
+    return false;
+  }
 
 
   //==================================================================================
@@ -155,11 +223,10 @@ class WiFiUtils{
     //------------------------ Tenta conexão
     uint16_t contadorAux = 0;    
     do{
-      Serial.println(STR_INFO_NOVA_TENTATIVA_WIFI + config->ssid + ". Tentativa="+contadorAux);  
+      Serial.println(STR_INFO_NOVA_TENTATIVA_WIFI + arrayToString(config->ssid , config->qtdRedes) + ". Tentativa="+contadorAux);  
       contadorAux++;
+      esp_task_wdt_reset();
     }while(contadorAux <= NU_RETRY_CONEXAO && !_conectaWiFiMelhorRssi(config, false));
-
-    esp_task_wdt_reset();
     
     return (WiFi.status() == WL_CONNECTED);
 
@@ -170,75 +237,82 @@ class WiFiUtils{
   //=========================== INTERNO: Requisição à API ============================
   //==================================================================================
   private: static bool executaReq(ConfigEstacao *config, String jsonStr, LeituraTS *ts, volatile Tempos *tempos) {
+    jsonStr.reserve(jsonStr.length() + 512);
 
-    //---------------------- Prepara requisição
     HTTPClient clienteHttp;
     clienteHttp.begin(config->url);
     clienteHttp.addHeader("Content-Type", CONTENT_TYPE);
     clienteHttp.setTimeout(HTTP_TIMEOUT);
     
-    //---------------------- Envia requisicao
-    Serial.println("Enviando pacote de dados: " +jsonStr);
-    short status = clienteHttp.POST(jsonStr);
+    Serial.print("Enviando pacote ("); Serial.print(jsonStr.length()); Serial.print(" bytes) \n"); Serial.println(jsonStr);
+    
+    Serial.print("Free heap before POST: ");
+    Serial.println(ESP.getFreeHeap());
+    short status = clienteHttp.POST(
+        (uint8_t*)jsonStr.c_str(),
+        jsonStr.length()
+    );
 
-    //---------------------- Analisa requisição
-    if(status == HTTP_STS_OK){
-      Serial.println(STR_INFO_STATUS       + String(status));
-      strcpy(_descricaoResetSoftware, "");
-    }else{
-      Serial.println(STR_INFO_STATUS_FALHA + String(status));
-      if (status == HTTP_STS_ERRO_INT){
-        ResetUtils::resetaEstacao(ts, tempos, MSG_RESET_FALHA_CONEXAO);
-      }
+    if (status == HTTP_STS_OK) {
+        Serial.print(STR_INFO_STATUS); Serial.println(status);
+    }else {
+        Serial.print("[[ERROR]] Código: "); Serial.println(status);
+        if (status == HTTP_STS_ERRO_INT) {
+            clienteHttp.end();
+            ResetUtils::resetaEstacao(ts, tempos, MSG_RESET_FALHA_CONEXAO);
+        }
     }
+
     clienteHttp.end();
 
-    // [  Positivo   ] ---> SUCESSO! (Ignora erros da API, impossível corrigir no lado do µ-controlador)
-    // [  Negativo   ] ---> FALHA..! (Falha de comunicação.............................................)
-    return status > 0;
-
-  }
+    return (status == HTTP_STS_OK);
+}
 
 
   //==================================================================================
   //=========================== PÚBLICO: Requisição à API ============================
   //==================================================================================
   public: static bool preparaEExecutaReq(ConfigEstacao *config, LeituraTS *ts, volatile Tempos *tempos) {
+      TimeUtils::conectaNtpEFallbacks();
 
-    byte contadorAux = 0;
-    String jsonStrEnvio = "";
-    String jsonAgora = SerializationUtils::getLeituraJson(ts, tempos, true);
-    String leiturasAcumuladas = String(_leiturasAcumuladas);
-    if(isNotNullOrEmptyStr(leiturasAcumuladas)){
-        size_t totalSize = jsonAgora.length() + 1 + leiturasAcumuladas.length(); // +1 pela ","
-        if (totalSize < sizeof(_leiturasAcumuladas)) {
-            jsonStrEnvio = leiturasAcumuladas + "," + jsonAgora;
-        } else {
-            Serial.println("[[WARNING]]: Leituras acumuladas + atual ultrapassam o buffer máximo. Usando apenas atual.");
-            jsonStrEnvio = jsonAgora;
-        }
-    }
+      String jsonStrEnvio = ""; jsonStrEnvio.reserve(LEITURAS_BUFFER_SIZE + 256 + 2);
 
-    if(!ehJsonSeparadoPorVirgulasValido(jsonStrEnvio)){
-      Serial.println("[[ERROR]]: Não foi possível juntar a leitura atual com as acumuladas. Utilizando apenas a atual.");
+      String jsonAgora; jsonAgora.reserve(256);
+      jsonAgora = SerializationUtils::getLeituraJsonCompact(ts, tempos);
+
+      String leiturasAcumuladas; leiturasAcumuladas.reserve(LEITURAS_BUFFER_SIZE);
+      leiturasAcumuladas = String(_leiturasAcumuladas);
+
       jsonStrEnvio = jsonAgora;
-    }
 
-    while(!executaReq(config, SerializationUtils::envelopa(jsonStrEnvio, config), ts, tempos)){ 
-      contadorAux++;
-      if(contadorAux > NU_RETRY_CONEXAO){
-        Serial.println("[[WARNING]]: Como não foi possível enviar pacote de dados, as leituras foram acumuladas");
-        
-        jsonStrEnvio.toCharArray(_leiturasAcumuladas, sizeof(_leiturasAcumuladas));
-        strcpy(_leiturasAcumuladas, jsonStrEnvio.c_str());
-        
-        Serial.println("[[INFO]]: Leituras acumuladas: "+String(_leiturasAcumuladas));
-        return false;
+      if(isNotNullOrEmptyStr(leiturasAcumuladas)) {
+          size_t totalSize = jsonAgora.length() + leiturasAcumuladas.length() + 1;
+          if (totalSize <= (LEITURAS_BUFFER_SIZE + 256 + 2)) {
+              jsonStrEnvio = leiturasAcumuladas + "," + jsonAgora;
+          } else {
+              Serial.println("[[WARNING]]: Tamanho excedido. Usando apenas leitura atual.");
+          }
       }
-    }
-    
-    memset(_leiturasAcumuladas, 0, sizeof(_leiturasAcumuladas));
-    return true;
+
+      if(!ehJsonSeparadoPorVirgulasValido(jsonStrEnvio)) {
+          Serial.println("[[ERROR]]: JSON inválido. Usando leitura atual.");
+          jsonStrEnvio = jsonAgora;
+      }
+
+      ushort contadorAux = 0;
+      while(contadorAux <= NU_RETRY_ENVIO) {
+          if(executaReq(config, SerializationUtils::envelopa(jsonStrEnvio, config), ts, tempos)) {
+              memset(_leiturasAcumuladas, 0, LEITURAS_BUFFER_SIZE);
+              return true;
+          }
+          delay(1000 * (++contadorAux));
+          esp_task_wdt_reset();
+      }
+
+      if (jsonStrEnvio.length() < LEITURAS_BUFFER_SIZE - 1)
+          snprintf(_leiturasAcumuladas, LEITURAS_BUFFER_SIZE, "%s", jsonStrEnvio.c_str());
+
+      return false;
   }
 
 

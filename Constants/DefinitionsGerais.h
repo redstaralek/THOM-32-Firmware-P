@@ -11,13 +11,14 @@
 #define LEITURAS_AVG_N          200
 #define LEITURAS_CHECK_N        4
 #define VERSAO_FIRMWARE         "1.1.0"
-#define NTP_SERVERS             {"pool.ntp.org", "south-america.pool.ntp.org", "time.google.com"}
+#define NTP_SERVERS             {"pool.ntp.org", "south-america.pool.ntp.org", "time.google.com", "time.cloudflare.com", "time.windows.com", "ntp.ubuntu.com", "nts.ntp.se", "nts1.time.nl", "asia.pool.ntp.org"}
 #define GMT_OFFSET_SEC          0           //UTC
 #define DAYLIGHT_OFFSET_SEC     0           //UTC
 #define DATE_FORMAT             "%Y-%m-%d %H:%M:%S"
 #define CONTENT_TYPE            "application/json"
 #define HTTP_STS_OK             200
 #define HTTP_STS_ERRO_INT       500
+#define LEITURAS_BUFFER_SIZE    20000
 
 //--------------------------------------------
 //------------------ MinMax ------------------

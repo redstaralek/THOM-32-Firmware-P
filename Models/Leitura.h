@@ -33,6 +33,4 @@ struct LeituraCompact {
   
 };
 
-RTC_NOINIT_ATTR char  _descricaoResetSoftware[100];
-RTC_NOINIT_ATTR char  _leiturasAcumuladas[7500];
-// RTC_NOINIT_ATTR LeituraCompact _leiturasAcumuladasCompactadas[50];
+char  _leiturasAcumuladas[LEITURAS_BUFFER_SIZE];

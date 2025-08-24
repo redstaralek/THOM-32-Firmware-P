@@ -131,19 +131,20 @@ class Sensores{
             counter++;
         }
 
-        bme->setTemperatureOversampling(BME68X_OS_16X);
-        bme->setHumidityOversampling(BME68X_OS_16X);
-        bme->setPressureOversampling(BME68X_OS_16X);
-        bme->setIIRFilterSize(BME680_FILTER_SIZE_3);
-        bme->setGasHeater(300, 200);
+        bme->setTemperatureOversampling(BME68X_OS_8X);
+        bme->setHumidityOversampling(BME68X_OS_8X);
+        bme->setPressureOversampling(BME68X_OS_8X);
+        bme->setIIRFilterSize(BME68X_FILTER_SIZE_3);
+        bme->setGasHeater(320, 100);
         return functionando;
     }
 
 
     private: bool inicializaEVerificaAS7331(){
         
-        // as7331->reset();
+        // bool sucessoReset = as7331->reset();
         // delay(4000);
+        // Serial.println("Reset AS7331 = "+String(sucessoReset));
         int counter = 0;
         bool funcionando = false;
         while(!funcionando && counter < 5){
@@ -204,7 +205,7 @@ class Sensores{
 
         while(!funcionando && counter < 5){
 
-            if(!scd->begin()){
+            if(!scd->begin(true, true)){
                 Serial.println("ERRO - [SCD4X] não encontrado!");
             }
             else{

@@ -19,7 +19,7 @@ class DebugUtils{
 
       //---------------------- Json (médias, mins, max, )
       Serial.println(STR_DEBUG_PRINT_JSON);
-      Serial.println("[[DEBUG]] " + SerializationUtils::getLeituraJson(ts, tempos, false));
+      Serial.println("[[DEBUG]] " + SerializationUtils::getLeituraJson(ts, tempos));
     }else{
       Serial.println(STR_DEBUG_1A_LEITURA_NAO_COLHIDA);
     }

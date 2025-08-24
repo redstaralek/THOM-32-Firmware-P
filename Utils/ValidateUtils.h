@@ -4,24 +4,32 @@ class ValidateUtils{
   //==================================================================================
   public: static bool credenciaisValidas(ConfigEstacao *config){
 
-    return isNotNullOrEmptyStr(config->url,          255)
-        && isNotNullOrEmptyStr(config->token,        255) 
-        && isNotNullOrEmptyStr(config->senha,        255) 
-        && isNotNullOrEmptyStr(config->ssid,         255) 
+    // Pelo menos um SSID válido
+    bool ssidOk = false;
+    for (const auto& ssid : config->ssid) {
+      if (ssid.length() > 0) {
+        ssidOk = true;
+        break;
+      }
+    }
+
+    // Pelo menos uma senha válida
+    bool senhaOk = false;
+    for (const auto& senha : config->senha) {
+      if (senha.length() > 0) {
+        senhaOk = true;
+        break;
+      }
+    }
+
+    // Os demais campos continuam únicos
+    return (ssidOk && senhaOk)
+        && isNotNullOrEmptyStr(config->url, 255)
+        && isNotNullOrEmptyStr(config->token, 255)
         && isNotNullOrEmptyStr(config->modeloBiruta, 255);
 
   }
-
-
-  //==================================================================================
-  //======================= Verifica usuário para redes PEAP  ========================
-  //==================================================================================
-  public: static bool possuiUser(ConfigEstacao *config){
-
-    return isNotNullOrEmptyStr(config->user, 255);
-
-  }
-
+  
   
   //==================================================================================
   //================================== Check Dado ====================================

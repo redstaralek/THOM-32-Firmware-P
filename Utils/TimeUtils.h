@@ -15,7 +15,7 @@ class TimeUtils{
         for (uint8_t i = 0; i < qtdServidores; i++) {
             configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, servidoresNtp[i].c_str());
             delay(5000); // Espera para sincronizar
-            for(uint8_t j = 0; j < 10; j++){
+            for(uint8_t j = 0; j < 20; j++){
                 time_t agora = time(nullptr);
                 if (agora > 1000000000) { // Verifica se o timestamp é válido (ex.: pós-2001)
                     syncedTime = agora;

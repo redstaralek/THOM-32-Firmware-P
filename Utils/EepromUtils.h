@@ -4,7 +4,7 @@ class EepromUtils{
 
     public: static void escreveDadoEEPROM(int addr, const String &str){
         
-        byte len = str.length();
+        ushort len = str.length();
         EEPROM.write(addr, len);
         for (uint16_t i = 0; i < len; i++)
             EEPROM.write(addr + 1 + i, str[i]); 

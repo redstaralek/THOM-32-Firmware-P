@@ -5,26 +5,26 @@
 #include "./Headers/headersExternos.h"
 #include "./Headers/headersModels.h"
 //----------------------- Structs e vars globais
-RTC_NOINIT_ATTR volatile uint16_t         _gir, _plv, _girAntes, _girMax;
-RTC_NOINIT_ATTR volatile long             _tempoGirosMax, _tempoAntes;
-static volatile Tempos                    _tempos;
-static LeituraTS                          _timeSeries;
-static ConfigEstacao                      _config;
-static Leitura                            _leitura;
-portMUX_TYPE                              _muxPluv                = portMUX_INITIALIZER_UNLOCKED;
-portMUX_TYPE                              _muxGiro                = portMUX_INITIALIZER_UNLOCKED;
-bool                                      _primeiro, _varMantidas = true;
+volatile uint16_t         _gir, _plv, _girAntes, _girMax;
+volatile long             _tempoGirosMax, _tempoAntes;
+static volatile Tempos    _tempos;
+static LeituraTS          _timeSeries;
+static ConfigEstacao      _config;
+static Leitura            _leitura;
+portMUX_TYPE              _muxPluv                = portMUX_INITIALIZER_UNLOCKED;
+portMUX_TYPE              _muxGiro                = portMUX_INITIALIZER_UNLOCKED;
+bool                      _primeiro, _varMantidas = true;
 //----------------------- Headers básicos em ordem
 #include "./Headers/headersInternos.h"
 //----------------------- Sensores Digitais
-Adafruit_BME680                           _bme;
-Adafruit_VEML7700                         _veml;
-SfeAS7331ArdI2C                           _as7331;
-SparkFun_AS3935                           _as3935(AS3935_ADDR);
-static Sensores*                          _sens                   = new Sensores();
-SCD4x                                     _scd;
-SGP30                                     _sgp;
-bool                                      _bmeOk, _as7331Ok, _vemlOk, _as3935Ok, _scdOk, _sgpOk;
+Adafruit_BME680           _bme;
+Adafruit_VEML7700         _veml;
+SfeAS7331ArdI2C           _as7331;
+SparkFun_AS3935           _as3935(AS3935_ADDR);
+static Sensores*          _sens                   = new Sensores();
+SCD4x                     _scd;
+SGP30                     _sgp;
+bool                      _bmeOk, _as7331Ok, _vemlOk, _as3935Ok, _scdOk, _sgpOk;
 
 //==================================================================================
 //======================== INTERRUPCÕES EXT: PLUV E ANEM ===========================
@@ -35,7 +35,7 @@ void IRAM_ATTR isr_plv() {
   portENTER_CRITICAL(&_muxPluv); {
     _tempos.eventoPluv = getMillis();
     //------------------- Certeza que foi pulso novo? -> Evita oscilações/bouncing
-    if (_tempos.eventoPluv - _tempos.ultimoEvPluv > ANTI_BOUNCING_PLUV){
+    if (_tempos.eventoPluv - _tempos.ultimoEvPluv > ANTI_BOUNCING){
         _plv++;
         _tempos.ultimoEvPluv = _tempos.eventoPluv;
     }
@@ -50,7 +50,7 @@ void IRAM_ATTR isr_gir() {
   portENTER_CRITICAL(&_muxGiro); {
     _tempos.eventoGiro = getMillis();
     //------------------- Certeza que foi pulso novo? -> Evita oscilações/bouncing
-    if (_tempos.eventoGiro - _tempos.ultimoEvGiro > ANTI_BOUNCING_GIRO){
+    if (_tempos.eventoGiro - _tempos.ultimoEvGiro > ANTI_BOUNCING){
         _gir++;
         _tempos.ultimoEvGiro = _tempos.eventoGiro;
     }
@@ -65,7 +65,6 @@ void IRAM_ATTR isr_gir() {
 //==================================== SETUP =======================================
 //==================================================================================
 void setup() {
-  setCpuFrequencyMhz(80);
   //--------------------- Watchdog Timer p/ tratar falhas e Core panic. Reseta estação se n sofrer refresh em X tempo
   {
     esp_task_wdt_init(WDT_TIMEOUT, true);
@@ -105,7 +104,7 @@ void setup() {
     Serial.println(STR_DEBUG_CONTADORES_ESVAZIADOS);
   }else{
     Serial.println(STR_DEBUG_RESET_ESPECIAL);
-    Serial.println(STR_DEBUG_MOTIVO + String(_descricaoResetSoftware));
+    // Serial.println(STR_DEBUG_MOTIVO + String(_descricaoResetSoftware));
   }
   _tempos.reset = getMillis();
   
@@ -297,7 +296,7 @@ static bool getDados() {
       Serial.print("tmp2 = " + String(scdTmp) + " °C, ");
       Serial.print("hum2 = " + String(scdHum) + "%\n");
 
-      if(scdCo2 >= 390){
+      if(scdCo2 >= 300){
         _leitura.co2        =  scdCo2;
         _timeSeries.co2     += _leitura.co2;
         
@@ -332,6 +331,15 @@ static bool getDados() {
       _timeSeries.hal     += _leitura.hal;
     }
 
+    //----------- Health Check (sensores)
+    {
+      _timeSeries.bmeOk   = _sens->bmeOk;
+      _timeSeries.as7331Ok= _sens->as7331Ok;
+      _timeSeries.vemlOk  = _sens->vemlOk;
+      _timeSeries.as3935Ok= _sens->as3935Ok;
+      _timeSeries.scdOk   = _sens->scdOk;
+    }
+
   }
 
   //----------------------- Colhe e processa dados analógicos
@@ -339,7 +347,7 @@ static bool getDados() {
 
     //--------- Tensão na bateria ([2*] pelos dois resistores iguais ~> lei de Ohm)
     Serial.println(STR_DEBUG_CALC_BAT);
-    float calibragemBat = ((float) 2300 / (float) 2050);
+    float calibragemBat = 1.1027;//((float) 2300 / (float) 2050);
     _leitura.bat       =  2 * (_3V3 * MediaUtils::analog(BAT_PIN, BAT_ADC_MIN, BAT_ADC_MAX, calibragemBat) / ADC_MAX);
     // Serial.println(_leitura.bat);
     if (!isnan(_leitura.bat) && _leitura.bat >= BAT_MIN && _leitura.bat <= BAT_MAX){
