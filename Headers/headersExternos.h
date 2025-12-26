@@ -8,8 +8,7 @@
 #include <SparkFun_AS3935.h>
 #include "Adafruit_VEML7700.h"
 // #include <DFRobot_SCD4X.h>
-#include "SparkFun_SCD4x_Arduino_Library.h" 
-#include "SparkFun_SGP30_Arduino_Library.h" 
+#include "SparkFun_SCD4x_Arduino_Library.h"
 #include <WiFi.h>
 #include <RunningMedian.h>
 #include "driver/adc.h" 
@@ -25,4 +24,5 @@ extern   "C" { uint8_t temprature_sens_read(); }
 #include "driver/rtc_io.h"
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
+#include <ESPping.h>
 

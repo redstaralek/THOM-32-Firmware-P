@@ -24,8 +24,7 @@ class MediaUtils{
       }
     }
     valor = medianFilter.getMedian();
-    Serial.println("Leitura ADC (filtro + mediana): " + String(valor));
-    Serial.println("Counter ADC: " + String(counter));
+    Serial.printf("Leitura ADC (filtro + mediana): %.2f. Counter ADC: %d \n", valor, counter);
     return counter > 0 ? valor : nan("");
   }
 

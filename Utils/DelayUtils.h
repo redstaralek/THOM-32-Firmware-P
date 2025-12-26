@@ -8,6 +8,7 @@ static void  lightSleepVelPluv(uint tempoADormir, volatile Tempos *tempos){
   delay(200);             
   // Controle de light-sleep quantizado por N parcelas de "MICROS_LIGHT_SL_QUANTUM"
   long tempoDormidoNaEspera = 0;
+  Serial.print("[[DEBUG]]>> ");
   while(tempoDormidoNaEspera <= tempoADormir){
     // Eventos de Wake-Up!
     {
@@ -24,12 +25,12 @@ static void  lightSleepVelPluv(uint tempoADormir, volatile Tempos *tempos){
       esp_light_sleep_start();                                  // Inicia light sleep
       long tempoDesteSleep = getMillis() - tempos->eventoSleep;    // Acordou -> qto tempo se passou?
       tempoDormidoNaEspera += tempoDesteSleep;                  // Incrementa acumulador local da espera
-      Serial.println("[[DEBUG]]>>(+"+String(tempoDesteSleep)
-                        +", de" + String(tempoDormidoNaEspera)+")");
+      Serial.printf("+%ld/%ld. ", tempoDesteSleep, tempoDormidoNaEspera);
     }
   }
   tempos->tempoDormido += tempoDormidoNaEspera;                 // Incrementa acumulador global do ciclo"
   esp_task_wdt_reset();
+  Serial.print("\n");
 }
 
 
@@ -39,7 +40,7 @@ static void  lightSleepVelPluv(uint tempoADormir, volatile Tempos *tempos){
 static bool usbConectadoATerminalResponsivo(uint tempoVerificacaoUsb){
 
   Serial.setTimeout(tempoVerificacaoUsb);
-  Serial.println(STR_DEBUG_PROBE_POINT + String(tempoVerificacaoUsb/1000) + "\n");
+  Serial.printf("%d\n", tempoVerificacaoUsb/1000);
   return Serial.readString().length() > 0;
 
 }
@@ -54,12 +55,13 @@ void esperaOuvindoCmd(Leitura *leitura, LeituraTS *ts, volatile Tempos *tempos, 
   // Espera
   Serial.setTimeout(tempoEspera);
   Serial.flush();
-  Serial.println(STR_INFO_TEMPO_COMANDO + String(tempoEspera/1000));
+  Serial.printf("%s%u\n", STR_INFO_TEMPO_COMANDO, tempoEspera/1000);
+
   // Interpreta comandos
   String valor = Serial.readStringUntil('\n');
   if(isNotNullOrEmptyStr(valor) && valor.indexOf("[[RESTART]]") >= 0){
     // Reset
-    ResetUtils::resetaEstacao(ts, tempos, STR_INFO_CMD_RESTART);
+    ResetUtils::resetaEstacao(ts, tempos);
   }else if(isNotNullOrEmptyStr(valor) && valor.indexOf("[[PRINT VAR]]") >= 0){
     // Print
     DebugUtils::printaLeituras(leitura, ts, tempos, _varMantidas); 
@@ -70,6 +72,7 @@ void esperaOuvindoCmd(Leitura *leitura, LeituraTS *ts, volatile Tempos *tempos, 
     // Calibra CO2
     sens->resetaScd();
   }
+  
   // Passa
 
   esp_task_wdt_reset();

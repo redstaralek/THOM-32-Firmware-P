@@ -50,10 +50,9 @@ class ValidateUtils{
   //============================ Check [Tmp, Hum, Pres]  =============================
   //==================================================================================
   public: static bool checkDados(float tmp, uint16_t hum, uint32_t prs, bool verbose){
-    bool okTmp = checkDado(tmp, TMP_MIN, TMP_MAX, verbose, STR_WARNING_TMP);
-    bool okHum = checkDado(hum, HUM_MIN, HUM_MAX, verbose, STR_WARNING_HUM);
-    bool okPrs = checkDado(prs, PRS_MIN, PRS_MAX, verbose, STR_WARNING_PRS);
-    return  okTmp && okHum && okPrs;
+    return checkDado(tmp, TMP_MIN, TMP_MAX, verbose, STR_WARNING_TMP)
+        && checkDado(hum, HUM_MIN, HUM_MAX, verbose, STR_WARNING_HUM)
+        && checkDado(prs, PRS_MIN, PRS_MAX, verbose, STR_WARNING_PRS);
     
   }
 

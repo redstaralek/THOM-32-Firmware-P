@@ -71,7 +71,6 @@ class ResetUtils{
     tempos->cicloInicio    = getMillis();
     tempos->tempoDormido   = 0;
     _varMantidas           = false;
-    // strcpy(_descricaoResetSoftware, "");
 
   }
 
@@ -79,19 +78,10 @@ class ResetUtils{
   //==================================================================================
   //======================== Funções de tolerância a falhas ==========================
   //==================================================================================
-  public: static void resetaEstacao(LeituraTS *ts, volatile Tempos *tempos, String mensagem="", bool mantemVariaveis=false){
-
-    Serial.println(mensagem);
-
-    // strncpy(_descricaoResetSoftware, mensagem.c_str(), sizeof(_descricaoResetSoftware)-1);
-    // _descricaoResetSoftware[sizeof(_descricaoResetSoftware) - 1] = '\0';
-    
-    // Serial.println(_descricaoResetSoftware);
+  public: static void resetaEstacao(LeituraTS *ts, volatile Tempos *tempos, bool mantemVariaveis=false){
 
     if(!mantemVariaveis)
       resetaVariaveis(ts, tempos);
-    if(!isNotNullOrEmptyStr(mensagem))
-      Serial.println(STR_DEBUG_RESET_MSG);
     esp_restart();
 
   }
@@ -100,13 +90,8 @@ class ResetUtils{
   //==================================================================================
   //============================ Deep sleep  temporizado =============================
   //==================================================================================
-  public: static void deep_sleep(long tempo, String mensagem=""){
+  public: static void deep_sleep(long tempo){
 
-    // if(!isNotNullOrEmptyStr(mensagem)){
-    //   Serial.println(STR_DEBUG_RESET_MSG);
-    //   strncpy(_descricaoResetSoftware, mensagem.c_str(), sizeof(_descricaoResetSoftware)-1);
-    //   _descricaoResetSoftware[sizeof(_descricaoResetSoftware) - 1] = '\0';
-    // }
     esp_sleep_enable_timer_wakeup(tempo * NANO_FACTOR);
     Serial.flush();
     esp_deep_sleep_start();

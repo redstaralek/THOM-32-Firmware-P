@@ -7,19 +7,19 @@ class DebugUtils{
 
     if(ts->qtd > 0){
       //---------------------- [Tmp, Hum, Prs, UV, Ilum, Cpu temp, Bat]
-      Serial.println(STR_DEBUG_PRINT_INSTANT);
-      Serial.println(STR_DEBUG_PRINT_INST_TMP + String(atual->tmp));
-      Serial.println(STR_DEBUG_PRINT_INST_HUM + String(atual->hum)); 
-      Serial.println(STR_DEBUG_PRINT_INST_PRS + String(atual->prs)); 
-      Serial.println(STR_DEBUG_PRINT_INST_UV  + String(atual->uva));
-      Serial.println(STR_DEBUG_PRINT_INST_LX  + String(atual->lx));
-      Serial.println(STR_DEBUG_PRINT_INST_BAT + String(atual->bat));
-      Serial.println(STR_DEBUG_PRINT_INST_CO2 + String(atual->co2));
-      Serial.println(STR_DEBUG_PRINT_INST_GAS + String(atual->gas));
-
+      Serial.print(STR_DEBUG_PRINT_INSTANT);
+      Serial.printf("[%s%.2f,",  STR_DEBUG_PRINT_INST_TMP, atual->tmp);
+      Serial.printf("%s%d,",    STR_DEBUG_PRINT_INST_HUM, atual->hum);
+      Serial.printf("%s%d,",    STR_DEBUG_PRINT_INST_PRS, atual->prs);
+      Serial.printf("%s%.2f,",  STR_DEBUG_PRINT_INST_UV,  atual->uva);
+      Serial.printf("%s%.2f,",  STR_DEBUG_PRINT_INST_LX,  atual->lx );
+      Serial.printf("%s%.2f,",  STR_DEBUG_PRINT_INST_BAT, atual->bat);
+      Serial.printf("%s%.0f,",  STR_DEBUG_PRINT_INST_CO2, atual->co2);
+      Serial.printf("%s%.0f]\n", STR_DEBUG_PRINT_INST_GAS, atual->gas);
+ 
       //---------------------- Json (médias, mins, max, )
       Serial.println(STR_DEBUG_PRINT_JSON);
-      Serial.println("[[DEBUG]] " + SerializationUtils::getLeituraJson(ts, tempos));
+      SerializationUtils::printLeituraJson(ts, tempos);
     }else{
       Serial.println(STR_DEBUG_1A_LEITURA_NAO_COLHIDA);
     }

@@ -23,8 +23,7 @@ SfeAS7331ArdI2C           _as7331;
 SparkFun_AS3935           _as3935(AS3935_ADDR);
 static Sensores*          _sens                   = new Sensores();
 SCD4x                     _scd;
-SGP30                     _sgp;
-bool                      _bmeOk, _as7331Ok, _vemlOk, _as3935Ok, _scdOk, _sgpOk;
+bool                      _bmeOk, _as7331Ok, _vemlOk, _as3935Ok, _scdOk;
 
 //==================================================================================
 //======================== INTERRUPCÕES EXT: PLUV E ANEM ===========================
@@ -104,7 +103,6 @@ void setup() {
     Serial.println(STR_DEBUG_CONTADORES_ESVAZIADOS);
   }else{
     Serial.println(STR_DEBUG_RESET_ESPECIAL);
-    // Serial.println(STR_DEBUG_MOTIVO + String(_descricaoResetSoftware));
   }
   _tempos.reset = getMillis();
   
@@ -126,7 +124,7 @@ void setup() {
     //Primeira conexão é obrigatória para sincronizar relógio interno com NTP
     // Conecta e recupera horario de servidor NTP
     if(!WiFiUtils::conectaWiFi(&_config) || !TimeUtils::conectaNtpEFallbacks()){
-      ResetUtils::resetaEstacao(&_timeSeries, &_tempos, STR_ERROR_CONECTA_WIFI);
+      ResetUtils::resetaEstacao(&_timeSeries, &_tempos);
     }
 
     // Desconecta
@@ -136,15 +134,14 @@ void setup() {
   //--------------------- Inicializa sensores
   {
     
-    bool* retornoSensores = _sens->set(&_bme, &_veml, &_as7331, &_as3935, &_scd, &_sgp);
+    bool* retornoSensores = _sens->set(&_bme, &_veml, &_as7331, &_as3935, &_scd);
     _bmeOk                = retornoSensores[0];
     _as7331Ok             = retornoSensores[1];
     _vemlOk               = retornoSensores[2];
     _as3935Ok             = retornoSensores[3];
     _scdOk                = retornoSensores[4];
-    _sgpOk                = retornoSensores[5];
-    Serial.println("Retorno dos sensores [BME68X,  AS7331, VEML7700,AS3935, SCD4X, SGP30] = "+ String(_bmeOk)+", "+ String(_as7331Ok)+", "+ String(_vemlOk)+", "+ String(_as3935Ok)+", "+ String(_scdOk)+", "+ String(_sgpOk));
-
+    Serial.printf("Retorno dos sensores [BME68X, AS7331, VEML7700, AS3935, SCD4X] = %d, %d, %d, %d, %d\n",
+              _bmeOk, _as7331Ok, _vemlOk, _as3935Ok, _scdOk);
   }
 
   //--------------------- Controle
@@ -180,7 +177,7 @@ void loop() {
       delay(1000);
       count++;
       if(count > 4)
-        ResetUtils::resetaEstacao(&_timeSeries, &_tempos, STR_ERROR_GET_DADOS);
+        ResetUtils::resetaEstacao(&_timeSeries, &_tempos);
     }
   }
    
@@ -201,9 +198,36 @@ void loop() {
   //--------------------- Envio de pacotes via WiFi
   if (tempoDesdeUltimoCicloEnvio()  >= MILISSEC_ENVIO || _primeiro) {
     // Conecta ao WiFi - retries tratados internamente
-    WiFiUtils::conectaWiFi(&_config);
-    // Envio de dados - retries tratados internamente
-    bool sucesso = WiFiUtils::preparaEExecutaReq(&_config, &_timeSeries, &_tempos);
+    bool conectado = WiFiUtils::conectaWiFi(&_config);
+    bool sucessoEnvio = false;
+
+    TimeUtils::conectaNtpEFallbacks();
+
+    char _jsonAgora[JSON_AGORA_BUFFER_SIZE];
+    SerializationUtils::getLeituraJsonCompact(_jsonAgora, sizeof(_jsonAgora), &_timeSeries, &_tempos);
+    String jsonAgora = String(_jsonAgora);
+    String leiturasAcumuladas = String(_leiturasAcumuladas);
+    String jsonStrListaInterna = jsonAgora;
+
+    if(isNotNullOrEmptyStr(leiturasAcumuladas)) {
+        size_t totalSize = jsonAgora.length() + leiturasAcumuladas.length() + 1;
+        if (totalSize <= LEITURAS_BUFFER_SIZE) {
+          jsonStrListaInterna = leiturasAcumuladas + "," + jsonAgora;
+        } else {
+          jsonStrListaInterna = leiturasAcumuladas;
+        }
+    }
+
+    Serial.printf("Heap livre antes de envelopar: %d\n", ESP.getFreeHeap());
+    char* envelopeBuffer = (char*) malloc(JSON_ENVELOPE_SIZE);
+    SerializationUtils::envelopa(envelopeBuffer, JSON_ENVELOPE_SIZE, jsonStrListaInterna.c_str(), &_config);    
+
+    Serial.printf("Heap livre após envelopar: %d\n", ESP.getFreeHeap());
+    if(conectado){
+      // Envio de dados - retries tratados internamente
+      sucessoEnvio = WiFiUtils::preparaEExecutaReq(&_config, &_timeSeries, &_tempos, envelopeBuffer);
+    }
+
     // Pós envio - economia elétr + reset de variáveis
     WiFiUtils::desligaWiFi();
     
@@ -212,15 +236,20 @@ void loop() {
     ResetUtils::resetaVariaveis(&_timeSeries, &_tempos);
     _primeiro = false; 
 
-    // Verifica saúde dos sensores após cada envio bem sucedido
-    if(sucesso){
+    if(sucessoEnvio){
+      // Verifica saúde dos sensores após cada envio bem sucedido
       bool* retornoSensores = _sens->garanteSensoresFuncionando();
       _bmeOk                = retornoSensores[0];
       _as7331Ok             = retornoSensores[1];
       _vemlOk               = retornoSensores[2];
       _as3935Ok             = retornoSensores[3];
       _scdOk                = retornoSensores[4];
+    }else{
+      //Acumula se não enviou
+      if (jsonStrListaInterna.length() < LEITURAS_BUFFER_SIZE - 1)
+          snprintf(_leiturasAcumuladas, LEITURAS_BUFFER_SIZE, "%s", jsonStrListaInterna.c_str());
     }
+    free(envelopeBuffer);
   }
   
 }
@@ -255,7 +284,6 @@ static bool getDados() {
     //----------- VEML7700
     if(_vemlOk){
       long _lxAux       =  _sens->veml->readLux(VEML_LUX_AUTO);
-      Serial.println("Lx="+String(_lxAux));
       _leitura.lx      =  ((float)_lxAux)/1000;
       _timeSeries.lx   += _leitura.lx;
       _timeSeries.qtdLx++;
@@ -263,15 +291,13 @@ static bool getDados() {
 
     //----------- AS7331
     if(_sens->leiturasAs7331Prontas()){
-
-      Serial.println("Leituras de 7331 prontas!");
       _leitura.uva        =  _sens->as7331->getUVA()/1000;
       _timeSeries.uva     += _leitura.uva;
       _leitura.uvb        =  _sens->as7331->getUVB()/1000;
       _timeSeries.uvb     += _leitura.uvb;
       _leitura.uvc        =  _sens->as7331->getUVC()/1000;
       _timeSeries.uvc     += _leitura.uvc;
-      Serial.println("UVA, UVB, UVC (Bruto) = "      + String(_leitura.uva) + ", " + String(_leitura.uvb) + ", " + String(_leitura.uvc));
+      Serial.printf("UVA, UVB, UVC (Bruto) = %.2f, %.2f, %.2f\n", _leitura.uva, _leitura.uvb, _leitura.uvc);
       _timeSeries.qtdUVBruto++;
       
     }
@@ -283,7 +309,7 @@ static bool getDados() {
       _leitura.rpot         += _sens->as3935->lightningEnergy();
       _timeSeries.rpot      += _leitura.rpot;
       _timeSeries.qtdR++;
-      Serial.println("Raio detectado (a " + String(_leitura.rdis)+" km, pot=" + String(_leitura.rpot)+")");
+      Serial.printf("Raio detectado (a %d km, pot=%d)", _leitura.rdis, _leitura.rpot);
     }
 
     //----------- SCD4X
@@ -292,9 +318,9 @@ static bool getDados() {
       float     scdTmp = _sens->scd->getTemperature();
       float     scdHum = _sens->scd->getHumidity();
       
-      Serial.print("[CO2] = "+ String(scdCo2) + " PPM, ");
-      Serial.print("tmp2 = " + String(scdTmp) + " °C, ");
-      Serial.print("hum2 = " + String(scdHum) + "%\n");
+      Serial.printf("[CO2] = %d PPM, ", scdCo2);
+      Serial.printf("tmp2 = %.2f °C, ", scdTmp);
+      Serial.printf("hum2 = %.2f \n", scdHum);
 
       if(scdCo2 >= 300){
         _leitura.co2        =  scdCo2;
@@ -303,25 +329,6 @@ static bool getDados() {
         _timeSeries.qtdCo2++;
       }
     }
-
-    // //----------- SGP30
-    // if(_sens->sgp->measureAirQuality() == SGP30_SUCCESS){
-    //   uint eCo2 = _sens->sgp->CO2;
-    //   uint tvoc = _sens->sgp->TVOC;
-      
-    //   Serial.print("[eCO2] = "+ String(eCo2) + " PPM, ");
-    //   Serial.print("[TVOC] = "+ String(tvoc) + " PPB. \n");
-
-    //   if(eCo2 >= 390){
-    //     _leitura.eCo2        =  eCo2;
-    //     _timeSeries.eCo2     += _leitura.co2;
-
-    //     _leitura.tvoc        =  tvoc;
-    //     _timeSeries.tvoc     += _leitura.tvoc;
-        
-    //     _timeSeries.qtdTvoc++;
-    //   }
-    // }
 
     //----------- Internos (ESP)
     {
@@ -402,7 +409,7 @@ static bool getDados() {
       
     }else{
       // Biruta inválida, reseta estação descartando variáveis (ciclo de coleta incompleto)
-      // ResetUtils::resetaEstacao(&_timeSeries, &_tempos, MSG_RESET_BIRUTA_INVAL);
+      // ResetUtils::resetaEstacao(&_timeSeries, &_tempos);
       Serial.println(MSG_RESET_BIRUTA_INVAL);
     }
     _timeSeries.sen += sin(direcao/RADIAN);

@@ -3,11 +3,11 @@
 //--------------------------------------------
 
 // Resets (firmware, vars, deepsleep, ...)
-#define MSG_RESET_FALHA_CONEXAO "A Estação falhou sucessivas vezes em se conectar à rede"
-#define MSG_RESET_VAR_500       "Status 500 ao salvar leitura"
-#define MSG_RESET_BAD_CONFIG    "Estação configurada incorretamente"
-#define MSG_RESET_BIRUTA_INVAL  "Modelo de biruta inválido! Esperava \"1\" ou \"2\"."
-#define MSG_RESET_BATERIA_BAIXA "Bateria muito baixa"
+#define MSG_RESET_FALHA_CONEXAO             "A Estação falhou sucessivas vezes em se conectar à rede"
+#define MSG_RESET_VAR_500                   "Status 500 ao salvar leitura"
+#define MSG_RESET_BAD_CONFIG                "Estação configurada incorretamente"
+#define MSG_RESET_BIRUTA_INVAL              "Modelo de biruta inválido! Esperava \"1\" ou \"2\"."
+#define MSG_RESET_BATERIA_BAIXA             "Bateria muito baixa"
 
 
 //--------------------------------------------
@@ -48,8 +48,8 @@
 #define STR_INFO_STATUS                     "[[INFO]]>> INFO: STATUS DA RESP........:"
 #define STR_INFO_RESP                       "[[INFO]]>> INFO: RESP DA API...........:"
 #define STR_INFO_CONECTADO_WIFI             "[[INFO]] Conexão estabelecida "
-#define STR_INFO_NOVA_TENTATIVA_WIFI        "[[INFO]]>> INFO: Nova tentativa de conexão Wi-Fi. SSIDs a tentar: "
-#define STR_INFO_ESPERANDO_WIFI             "[[INFO]]>> INFO: Esperando conexão à rede WiFi... RSSI: "
+#define STR_INFO_NOVA_TENTATIVA_WIFI        "[[INFO]]>> INFO: Nova tentativas, SSIDs a tentar: "
+#define STR_INFO_ESPERANDO_WIFI             "Esperando conexão à rede WiFi, RSSI: "
 #define STR_INFO_BUSCANDO_WIFI_MEMORIA      "[[INFO]]>> INFO: Reconfiguração da rede WiFi não foi solicitada. Dados serão buscados na memória."
 #define STR_INFO_TEMPO_COMANDO              "[[INFO]]>> INFO: espera ocupada, envie os comandos desejados neste intervalo. Tempo (seg): "
 
@@ -80,16 +80,16 @@
 #define STR_DEBUG_1A_LEITURA_NAO_COLHIDA    "[[DEBUG]]>> Primeira leitura ainda não colhida. Aguarde e solicite novamente"
 
 // DEBUGS DE PRINT VARS
-#define STR_DEBUG_PRINT_INSTANT             "[[DEBUG]]>> Leituras atuais [Tmp, Hum, Prs, UV, Ilum, Cpu temp, Bat volt]."
+#define STR_DEBUG_PRINT_INSTANT             "[[DEBUG]]>> Leituras atuais: "
 #define STR_DEBUG_PRINT_JSON                "[[DEBUG]]>> Json de dados gerais [médias, hardware, minmax, etc]"
-#define STR_DEBUG_PRINT_INST_TMP            "[[DEBUG]] Inst->Tmp......:"
-#define STR_DEBUG_PRINT_INST_HUM            "[[DEBUG]] Inst->Hum......:"
-#define STR_DEBUG_PRINT_INST_PRS            "[[DEBUG]] Inst->Prs......:"
-#define STR_DEBUG_PRINT_INST_UV             "[[DEBUG]] Inst->UVA......:"
-#define STR_DEBUG_PRINT_INST_LX             "[[DEBUG]] Inst->lux......:"
-#define STR_DEBUG_PRINT_INST_BAT            "[[DEBUG]] Inst->Bat......:"
-#define STR_DEBUG_PRINT_INST_CO2            "[[DEBUG]] Inst->CO2......:"
-#define STR_DEBUG_PRINT_INST_GAS            "[[DEBUG]] Inst->GasRes...:"
+#define STR_DEBUG_PRINT_INST_TMP            "Tmp="
+#define STR_DEBUG_PRINT_INST_HUM            "Hum="
+#define STR_DEBUG_PRINT_INST_PRS            "Prs="
+#define STR_DEBUG_PRINT_INST_UV             "UVA="
+#define STR_DEBUG_PRINT_INST_LX             "lux="
+#define STR_DEBUG_PRINT_INST_BAT            "Bat="
+#define STR_DEBUG_PRINT_INST_CO2            "CO2="
+#define STR_DEBUG_PRINT_INST_GAS            "Res="
 
 // PROBE POINT
 #define STR_DEBUG_PROBE_POINT               "[[USB_CONECTADO?]] ~> tempo p/ resp (seg): "

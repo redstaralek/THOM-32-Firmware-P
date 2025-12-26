@@ -44,9 +44,6 @@
 #define ADC_RES                 12
 #define ADC_MAX                 ((1 << ADC_RES) - 1)
 
-#define ML8511_ADC_MIN          (ADC_MAX * 1.000f / _3V3)    //https://cdn.sparkfun.com/datasheets/Sensors/LightImaging/ML8511_3-8-13.pdf
-#define ML8511_ADC_MAX          (ADC_MAX * 2.000f / _3V3)    //https://cdn.sparkfun.com/datasheets/Sensors/LightImaging/ML8511_3-8-13.pdf
-
 #define LDR_ADC_MIN             0
 #define LDR_ADC_MAX             ADC_MAX
 

@@ -11,24 +11,21 @@ class Sensores{
     public: SparkFun_AS3935     *as3935;
     public: Adafruit_VEML7700   *veml;
     public: SCD4x               *scd;
-    public: SGP30               *sgp;
     public: bool bmeOk   ;
     public: bool vemlOk  ;
     public: bool as7331Ok;
     public: bool as3935Ok;
     public: bool scdOk   ;
-    public: bool sgpOk   ;
     
     //==================================================================================
     //============================ Set dos sensores I²C ================================
     //==================================================================================
-    public: bool* set(Adafruit_BME680 *bme, Adafruit_VEML7700 *veml, SfeAS7331ArdI2C *as7331, SparkFun_AS3935 *as3935, SCD4x *scd, SGP30 *sgp){
+    public: bool* set(Adafruit_BME680 *bme, Adafruit_VEML7700 *veml, SfeAS7331ArdI2C *as7331, SparkFun_AS3935 *as3935, SCD4x *scd){
         this->bme       = bme;
         this->veml      = veml;
         this->as7331    = as7331;
         this->as3935    = as3935;
         this->scd       = scd;
-        this->sgp       = sgp;
         return this->inicializaSensores();
     }
     
@@ -43,7 +40,6 @@ class Sensores{
         as7331Ok   = false;
         as3935Ok   = false;
         scdOk      = false;
-        sgpOk      = false;
 
         Wire.begin();
         // Wire.setClock(50000);
@@ -78,13 +74,7 @@ class Sensores{
             delay(500);
         }
 
-        // //--------------------- SGP30
-        // {
-        //     sgpOk = this->inicializaEVerificaSGP30();
-        //     delay(500);
-        // }
-
-        return new bool[6] {bmeOk, as7331Ok, vemlOk, as3935Ok, scdOk, sgpOk};
+        return new bool[6] {bmeOk, as7331Ok, vemlOk, as3935Ok, scdOk};
 
     }
 
@@ -142,9 +132,6 @@ class Sensores{
 
     private: bool inicializaEVerificaAS7331(){
         
-        // bool sucessoReset = as7331->reset();
-        // delay(4000);
-        // Serial.println("Reset AS7331 = "+String(sucessoReset));
         int counter = 0;
         bool funcionando = false;
         while(!funcionando && counter < 5){
@@ -223,32 +210,6 @@ class Sensores{
 
     }
 
-    private: bool inicializaEVerificaSGP30(){
-        
-        int counter = 0;
-        bool funcionando = false;
-
-        while(!funcionando && counter < 5){
-            
-            if(!sgp->begin()){
-                Serial.println("ERRO - [SGP30] não encontrado!");
-            }
-            else{
-                Serial.println("OK - [SGP30] encontrado em 0x58!");
-                funcionando = true;
-            }
-
-            delay(1000);
-            counter++;
-        }
-
-        sgp->initAirQuality();
-        delay(1000);
-        return funcionando;
-
-    }
-
-
     public: bool ativaEOuCalibraScd(bool calibra = false){
         
         bool sucessoCalib = false;
@@ -261,22 +222,22 @@ class Sensores{
             scd->stopPeriodicMeasurement();
             delay(750);
             sucessoCalib = (scd->performForcedRecalibration(ppmRef) == 0x7fff);
-            Serial.println("Calibragem Forçada="+String(sucessoCalib));
+            Serial.printf("Calibragem Forçada= %d \n", sucessoCalib);
             inicializaEVerificaSCD4X();
         }
         delay(1000);
         scd->setTemperatureOffset(0);
         scd->setSensorAltitude(1160);
 
-        Serial.println("bmeOk="+String(bmeOk));
+        Serial.printf("bmeOk=%d \n", bmeOk);
         if(bmeOk && bme->performReading()){
             int bmePres = bme->pressure;
-            Serial.println("bmePres="+String(bmePres));
+            Serial.printf("bmePres=%d \n", bmePres);
             if(bmePres >= PRS_MIN){
-                Serial.println("Definindo pressão SCD41 como "+String(bmePres)+"Pa.");
+                Serial.printf("Definindo pressão SCD41 como %d Pa.", bmePres);
                 bool pressaoSetada = scd->setAmbientPressure(bmePres);
-                String sucessoStr = (pressaoSetada ? "Ok" : "Erro");
-                Serial.println("Pressão do SCD41 definida com sucesso = "+sucessoStr+".");
+                Serial.printf("Pressão do SCD41 definida com sucesso = %s. \n", 
+                                pressaoSetada ? "Ok" : "Erro");
             }
         }
         delay(1000);
@@ -288,7 +249,7 @@ class Sensores{
         if(scd->stopPeriodicMeasurement()){
             delay(750);
             bool sucesso = scd->performFactoryReset();
-            Serial.println("Reset do SCD41 feito com sucesso = "+String(sucesso)+".");
+            Serial.printf("Reset do SCD41 feito com sucesso = %d\n.", sucesso);
             inicializaEVerificaSCD4X();
             return sucesso;
         }else{
@@ -332,14 +293,14 @@ class Sensores{
     }
 
     public: bool* garanteSensoresFuncionando(){
-        bmeOk   = garanteBME688Funcionando();
-        as7331Ok   = garanteAS7331Funcionando();
-        vemlOk = garanteVEML7700Funcionando();
-        as3935Ok   = garanteAS3935Funcionando();
-        scdOk    = garanteSCD4XFuncionando();
-        // sgpOk      = garanteSGP30Funcionando();
-        Serial.println("[BME688, AS7331, VEML7700, AS3935, SCD4X, SGP30] = ["+String(bmeOk)+", "+String(as7331Ok)+", "+String(vemlOk)+", "+String(as3935Ok)+", "+String(scdOk)+", "+String(sgpOk)+"]");
-        return new bool[6]{bmeOk, as7331Ok, vemlOk, as3935Ok, scdOk, sgpOk};
+        bmeOk       = garanteBME688Funcionando();
+        as7331Ok    = garanteAS7331Funcionando();
+        vemlOk      = garanteVEML7700Funcionando();
+        as3935Ok    = garanteAS3935Funcionando();
+        scdOk       = garanteSCD4XFuncionando();
+        Serial.printf("[BME688, AS7331, VEML7700, AS3935, SCD4X] = [%d, %d, %d, %d, %d]\n",
+              bmeOk, as7331Ok, vemlOk, as3935Ok, scdOk);
+        return new bool[6]{bmeOk, as7331Ok, vemlOk, as3935Ok, scdOk};
         
     }
     
@@ -401,25 +362,6 @@ class Sensores{
         }
         return true;
     }
-
-
-    public: bool garanteSGP30Funcionando(){
-        
-        SGP30ERR error = sgp->measureTest();
-        if(error == SGP30_ERR_BAD_CRC){
-            Serial.println("Erro no SGP30 detectado (CRC falhou). Reiniciando o sensor.");
-            return inicializaEVerificaSGP30();
-        }else if(error == SGP30_ERR_I2C_TIMEOUT){
-            Serial.println("Erro no SGP30 detectado (timeout). Reiniciando o sensor.");
-            return inicializaEVerificaSGP30();
-        }else if(error == SGP30_SELF_TEST_FAIL){
-            Serial.println("Erro no SGP30 detectado (falha de teste). Reiniciando o sensor.");
-            return inicializaEVerificaSGP30();
-        }
-        return true;
-
-    }
-
 
 
 };

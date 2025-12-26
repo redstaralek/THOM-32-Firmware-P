@@ -9,10 +9,10 @@
 #define NU_RETRY_INIT_SIM       5
 #define NU_RETRY_CREDENCIAIS    3
 #define MILISSEG_POOLING        30*1000  
-#define MILISSEC_ENVIO          9*60*1000
+#define MILISSEC_ENVIO          15*60*1000
 #define SERIAL_RATE             9600 
 #define WDT_TIMEOUT             60*20        //20 minutos
-#define HTTP_TIMEOUT            60000
+#define HTTP_TIMEOUT            120*1000
 #define MILIS_VERIFICACAO_USB   2000
 #define MAX_WIFIS               5
 #define NUM_TENTATIVAS_CONEXAO  5 

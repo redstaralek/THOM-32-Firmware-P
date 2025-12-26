@@ -20,20 +20,6 @@ bool isNotNullOrEmptyStr(const char* str) {
 
 
 //==================================================================================
-//========================== Verifica string é json válido =========================
-//==================================================================================
-bool isValidJson(const String& jsonString) {
-  DynamicJsonDocument doc(2048);
-  return !deserializeJson(doc, jsonString.c_str());
-}
-
-
-bool ehJsonSeparadoPorVirgulasValido(String jsonStrEnvio){
-  String aux = String("{\"chave\": [") + jsonStrEnvio + String("]}");
-  return isNotNullOrEmptyStr(jsonStrEnvio) && isValidJson(aux);
-}
-
-//==================================================================================
 //==================== Converte entrada de usuário p/ boolean  =====================
 //==================================================================================
 bool inputToBool(String resposta){
@@ -131,37 +117,6 @@ float filtroPassaBaixa(float valorAtual, float valorAnterior, float alpha) {
 }
 
 
-//==================================================================================
-//======================== Varredura de endereços I²C ==============================
-//==================================================================================
-void i2cScan(){
-  byte error, address;
-  int nDevices = 0;
-
-  for (address = 1; address < 127; address++) {
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-
-    if (error == 0) {
-      Serial.print("Dispositivo I2C encontrado no endereço 0x");
-      if (address < 16) Serial.print("0");
-      Serial.print(address, HEX);
-      Serial.println("  !");
-      nDevices++;
-    } else if (error == 4) {
-      Serial.print("Erro desconhecido no endereço 0x");
-      if (address < 16) Serial.print("0");
-      Serial.println(address, HEX);
-    }
-  }
-
-  if (nDevices == 0)
-    Serial.println("Nenhum dispositivo I2C encontrado\n");
-  else
-    Serial.println("Scan completo\n");
-}
-
-
 bool noIntervalo(float valor, float valorMinimo, float valorMaximo){
 
     if(isnan(valor))                                    { return false; }
@@ -175,12 +130,17 @@ bool noIntervalo(float valor, float valorMinimo, float valorMaximo){
 }
 
 
-String arrayToString(String array[], int arraySize) {
-  if (!array || arraySize <= 0) return "";
-  String result;
+void printArray(const String array[], int arraySize) {
+  Serial.print("[");
   for (int i = 0; i < arraySize; i++) {
-    result += array[i];
-    if (i < arraySize - 1) result += ", ";
+    Serial.print(array[i]);
+    if (i < arraySize - 1) Serial.print(", ");
   }
-  return result;
+  Serial.print("]");
 }
+
+
+// Helper lambda for safe division [Added]
+auto safeDiv = [](float numerator, int denominator, float defaultVal = -1.0f) {
+    return (denominator > 0) ? round2(numerator / denominator) : defaultVal;
+};
